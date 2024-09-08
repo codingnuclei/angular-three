@@ -1,4 +1,4 @@
-export * from './lib/any-collider';
+export * from './lib/colliders';
 export * from './lib/physics';
 export * from './lib/rigid-body';
 

@@ -37,6 +37,7 @@ export class NgtrDebug {
 			if (!world || !lineSegments) return;
 
 			const buffers = world.debugRender();
+
 			lineSegments.geometry.setAttribute('position', new BufferAttribute(buffers.vertices, 3));
 			lineSegments.geometry.setAttribute('color', new BufferAttribute(buffers.colors, 4));
 		});

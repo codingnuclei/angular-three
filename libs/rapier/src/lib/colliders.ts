@@ -18,15 +18,16 @@ import {
 	NgtrTrimeshArgs,
 } from './types';
 
+const ANY_COLLIDER_HOST_DIRECTIVE = {
+	directive: NgtrAnyCollider,
+	inputs: ['options', 'name', 'scale', 'position', 'quaternion', 'rotation', 'userData'],
+	outputs: ['collisionEnter', 'collisionExit', 'intersectionEnter', 'intersectionExit', 'contactForce'],
+};
+
 @Directive({
 	selector: 'ngt-object3D[ngtrCuboidCollider]',
 	standalone: true,
-	hostDirectives: [
-		{
-			directive: NgtrAnyCollider,
-			inputs: ['options', 'name', 'scale', 'position', 'quaternion', 'rotation', 'userData'],
-		},
-	],
+	hostDirectives: [ANY_COLLIDER_HOST_DIRECTIVE],
 })
 export class NgtrCuboidCollider {
 	args = input.required<NgtrCuboidArgs>();
@@ -46,12 +47,7 @@ export class NgtrCuboidCollider {
 @Directive({
 	selector: 'ngt-object3D[ngtrCapsuleCollider]',
 	standalone: true,
-	hostDirectives: [
-		{
-			directive: NgtrAnyCollider,
-			inputs: ['options', 'name', 'scale', 'position', 'quaternion', 'rotation', 'userData'],
-		},
-	],
+	hostDirectives: [ANY_COLLIDER_HOST_DIRECTIVE],
 })
 export class NgtrCapsuleCollider {
 	args = input.required<NgtrCapsuleArgs>();
@@ -71,12 +67,7 @@ export class NgtrCapsuleCollider {
 @Directive({
 	selector: 'ngt-object3D[ngtrBallCollider]',
 	standalone: true,
-	hostDirectives: [
-		{
-			directive: NgtrAnyCollider,
-			inputs: ['options', 'name', 'scale', 'position', 'quaternion', 'rotation', 'userData'],
-		},
-	],
+	hostDirectives: [ANY_COLLIDER_HOST_DIRECTIVE],
 })
 export class NgtrBallCollider {
 	args = input.required<NgtrBallArgs>();
@@ -96,12 +87,7 @@ export class NgtrBallCollider {
 @Directive({
 	selector: 'ngt-object3D[ngtrConvexHullCollider]',
 	standalone: true,
-	hostDirectives: [
-		{
-			directive: NgtrAnyCollider,
-			inputs: ['options', 'name', 'scale', 'position', 'quaternion', 'rotation', 'userData'],
-		},
-	],
+	hostDirectives: [ANY_COLLIDER_HOST_DIRECTIVE],
 })
 export class NgtrConvexHullCollider {
 	args = input.required<NgtrConvexHullArgs>();
@@ -121,12 +107,7 @@ export class NgtrConvexHullCollider {
 @Directive({
 	selector: 'ngt-object3D[ngtrHeightfieldCollider]',
 	standalone: true,
-	hostDirectives: [
-		{
-			directive: NgtrAnyCollider,
-			inputs: ['options', 'name', 'scale', 'position', 'quaternion', 'rotation', 'userData'],
-		},
-	],
+	hostDirectives: [ANY_COLLIDER_HOST_DIRECTIVE],
 })
 export class NgtrHeightfieldCollider {
 	args = input.required<NgtrHeightfieldArgs>();
@@ -146,12 +127,7 @@ export class NgtrHeightfieldCollider {
 @Directive({
 	selector: 'ngt-object3D[ngtrTrimeshCollider]',
 	standalone: true,
-	hostDirectives: [
-		{
-			directive: NgtrAnyCollider,
-			inputs: ['options', 'name', 'scale', 'position', 'quaternion', 'rotation', 'userData'],
-		},
-	],
+	hostDirectives: [ANY_COLLIDER_HOST_DIRECTIVE],
 })
 export class NgtrTrimeshCollider {
 	args = input.required<NgtrTrimeshArgs>();
@@ -171,12 +147,7 @@ export class NgtrTrimeshCollider {
 @Directive({
 	selector: 'ngt-object3D[ngtrPolylineCollider]',
 	standalone: true,
-	hostDirectives: [
-		{
-			directive: NgtrAnyCollider,
-			inputs: ['options', 'name', 'scale', 'position', 'quaternion', 'rotation', 'userData'],
-		},
-	],
+	hostDirectives: [ANY_COLLIDER_HOST_DIRECTIVE],
 })
 export class NgtrPolylineCollider {
 	args = input.required<NgtrPolylineArgs>();
@@ -196,12 +167,7 @@ export class NgtrPolylineCollider {
 @Directive({
 	selector: 'ngt-object3D[ngtrRoundCuboidCollider]',
 	standalone: true,
-	hostDirectives: [
-		{
-			directive: NgtrAnyCollider,
-			inputs: ['options', 'name', 'scale', 'position', 'quaternion', 'rotation', 'userData'],
-		},
-	],
+	hostDirectives: [ANY_COLLIDER_HOST_DIRECTIVE],
 })
 export class NgtrRoundCuboidCollider {
 	args = input.required<NgtrRoundCuboidArgs>();
@@ -221,12 +187,7 @@ export class NgtrRoundCuboidCollider {
 @Directive({
 	selector: 'ngt-object3D[ngtrCylinderCollider]',
 	standalone: true,
-	hostDirectives: [
-		{
-			directive: NgtrAnyCollider,
-			inputs: ['options', 'name', 'scale', 'position', 'quaternion', 'rotation', 'userData'],
-		},
-	],
+	hostDirectives: [ANY_COLLIDER_HOST_DIRECTIVE],
 })
 export class NgtrCylinderCollider {
 	args = input.required<NgtrCylinderArgs>();
@@ -246,12 +207,7 @@ export class NgtrCylinderCollider {
 @Directive({
 	selector: 'ngt-object3D[ngtrRoundCylinderCollider]',
 	standalone: true,
-	hostDirectives: [
-		{
-			directive: NgtrAnyCollider,
-			inputs: ['options', 'name', 'scale', 'position', 'quaternion', 'rotation', 'userData'],
-		},
-	],
+	hostDirectives: [ANY_COLLIDER_HOST_DIRECTIVE],
 })
 export class NgtrRoundCylinderCollider {
 	args = input.required<NgtrRoundCylinderArgs>();
@@ -271,12 +227,7 @@ export class NgtrRoundCylinderCollider {
 @Directive({
 	selector: 'ngt-object3D[ngtrConeCollider]',
 	standalone: true,
-	hostDirectives: [
-		{
-			directive: NgtrAnyCollider,
-			inputs: ['options', 'name', 'scale', 'position', 'quaternion', 'rotation', 'userData'],
-		},
-	],
+	hostDirectives: [ANY_COLLIDER_HOST_DIRECTIVE],
 })
 export class NgtrConeCollider {
 	args = input.required<NgtrConeArgs>();
@@ -296,12 +247,7 @@ export class NgtrConeCollider {
 @Directive({
 	selector: 'ngt-object3D[ngtrRoundConeCollider]',
 	standalone: true,
-	hostDirectives: [
-		{
-			directive: NgtrAnyCollider,
-			inputs: ['options', 'name', 'scale', 'position', 'quaternion', 'rotation', 'userData'],
-		},
-	],
+	hostDirectives: [ANY_COLLIDER_HOST_DIRECTIVE],
 })
 export class NgtrRoundConeCollider {
 	args = input.required<NgtrRoundConeArgs>();
@@ -321,12 +267,7 @@ export class NgtrRoundConeCollider {
 @Directive({
 	selector: 'ngt-object3D[ngtrConvexMeshCollider]',
 	standalone: true,
-	hostDirectives: [
-		{
-			directive: NgtrAnyCollider,
-			inputs: ['options', 'name', 'scale', 'position', 'quaternion', 'rotation', 'userData'],
-		},
-	],
+	hostDirectives: [ANY_COLLIDER_HOST_DIRECTIVE],
 })
 export class NgtrConvexMeshCollider {
 	args = input.required<NgtrConvexMeshArgs>();
@@ -346,12 +287,7 @@ export class NgtrConvexMeshCollider {
 @Directive({
 	selector: 'ngt-object3D[ngtrRoundConvexHullCollider]',
 	standalone: true,
-	hostDirectives: [
-		{
-			directive: NgtrAnyCollider,
-			inputs: ['options', 'name', 'scale', 'position', 'quaternion', 'rotation', 'userData'],
-		},
-	],
+	hostDirectives: [ANY_COLLIDER_HOST_DIRECTIVE],
 })
 export class NgtrRoundConvexHullCollider {
 	args = input.required<NgtrRoundConvexHullArgs>();
@@ -371,12 +307,7 @@ export class NgtrRoundConvexHullCollider {
 @Directive({
 	selector: 'ngt-object3D[ngtrRoundConvexMeshCollider]',
 	standalone: true,
-	hostDirectives: [
-		{
-			directive: NgtrAnyCollider,
-			inputs: ['options', 'name', 'scale', 'position', 'quaternion', 'rotation', 'userData'],
-		},
-	],
+	hostDirectives: [ANY_COLLIDER_HOST_DIRECTIVE],
 })
 export class NgtrRoundConvexMeshCollider {
 	args = input.required<NgtrRoundConvexMeshArgs>();

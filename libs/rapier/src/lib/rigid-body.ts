@@ -7,7 +7,6 @@ import {
 	effect,
 	ElementRef,
 	inject,
-	Injector,
 	input,
 	model,
 	output,
@@ -81,7 +80,6 @@ export class NgtrAnyCollider {
 
 	private rigidBody = inject(NgtrRigidBody, { optional: true });
 	private physics = inject(NgtrPhysics);
-	private injector = inject(Injector);
 	objectRef = inject<ElementRef<Object3D>>(ElementRef);
 
 	private scaledArgs = computed(() => {
@@ -114,163 +112,33 @@ export class NgtrAnyCollider {
 	});
 
 	private collider = computed(() => {
-		const rigidBody = this.rigidBody?.rigidBody();
-		if (!rigidBody) return null;
-
 		const worldSingleton = this.physics.worldSingleton();
 		if (!worldSingleton) return null;
 
-		const [shape, args] = [this.shape(), this.scaledArgs()];
+		const [shape, args, rigidBody] = [this.shape(), this.scaledArgs(), this.rigidBody?.rigidBody()];
 
 		// @ts-expect-error - we know the type of the data
 		const desc = ColliderDesc[shape](...args);
 		if (!desc) return null;
 
-		return worldSingleton.proxy.createCollider(desc, rigidBody);
+		return worldSingleton.proxy.createCollider(desc, rigidBody ?? undefined);
 	});
 
 	constructor() {
 		extend({ Object3D });
 
 		effect((onCleanup) => {
-			const collider = this.collider();
-			if (!collider) return;
-
-			const worldSingleton = this.physics.worldSingleton();
-			if (!worldSingleton) return;
-
-			const state = this.createColliderState(
-				collider,
-				this.objectRef.nativeElement,
-				this.rigidBody?.objectRef.nativeElement,
-			);
-			this.physics.colliderStates.set(collider.handle, state);
-
-			onCleanup(() => {
-				this.physics.colliderStates.delete(collider.handle);
-				if (worldSingleton.proxy.getCollider(collider.handle)) {
-					worldSingleton.proxy.removeCollider(collider, true);
-				}
-			});
+			const cleanup = this.createColliderStateEffect();
+			onCleanup(() => cleanup?.());
 		});
 
 		effect((onCleanup) => {
-			const collider = this.collider();
-			if (!collider) return;
-
-			const worldSingleton = this.physics.worldSingleton();
-			if (!worldSingleton) return;
-
-			const collisionEnter = this.collisionEnter.emit.bind(this.collisionEnter);
-			const collisionExit = this.collisionExit.emit.bind(this.collisionExit);
-			const intersectionEnter = this.intersectionEnter.emit.bind(this.intersectionEnter);
-			const intersectionExit = this.intersectionExit.emit.bind(this.intersectionExit);
-			const contactForce = this.contactForce.emit.bind(this.contactForce);
-
-			const hasCollisionEvent = hasListener(
-				this.collisionEnter,
-				this.collisionExit,
-				this.intersectionEnter,
-				this.intersectionExit,
-				this.rigidBody?.collisionEnter,
-				this.rigidBody?.collisionExit,
-				this.rigidBody?.intersectionEnter,
-				this.rigidBody?.intersectionExit,
-			);
-			const hasContactForceEvent = hasListener(this.contactForce, this.rigidBody?.contactForce);
-
-			if (hasCollisionEvent && hasContactForceEvent) {
-				collider.setActiveEvents(ActiveEvents.COLLISION_EVENTS | ActiveEvents.CONTACT_FORCE_EVENTS);
-			} else if (hasCollisionEvent) {
-				collider.setActiveEvents(ActiveEvents.COLLISION_EVENTS);
-			} else if (hasContactForceEvent) {
-				collider.setActiveEvents(ActiveEvents.CONTACT_FORCE_EVENTS);
-			}
-
-			this.physics.colliderEvents.set(collider.handle, {
-				onCollisionEnter: collisionEnter,
-				onCollisionExit: collisionExit,
-				onIntersectionEnter: intersectionEnter,
-				onIntersectionExit: intersectionExit,
-				onContactForce: contactForce,
-			});
-
-			onCleanup(() => {
-				this.physics.colliderEvents.delete(collider.handle);
-			});
+			const cleanup = this.createColliderEventsEffect();
+			onCleanup(() => cleanup?.());
 		});
 
 		effect(() => {
-			const collider = this.collider();
-			if (!collider) return;
-
-			const worldSingleton = this.physics.worldSingleton();
-			if (!worldSingleton) return;
-
-			const state = this.physics.colliderStates.get(collider.handle);
-			if (!state) return;
-
-			// Update collider position based on the object's position
-			const parentWorldScale = state.object.parent!.getWorldScale(_vector3);
-			const parentInvertedWorldMatrix = state.worldParent?.matrixWorld.clone().invert();
-
-			state.object.updateWorldMatrix(true, false);
-
-			_matrix4.copy(state.object.matrixWorld);
-
-			if (parentInvertedWorldMatrix) {
-				_matrix4.premultiply(parentInvertedWorldMatrix);
-			}
-
-			_matrix4.decompose(_position, _rotation, _scale);
-
-			if (collider.parent()) {
-				collider.setTranslationWrtParent({
-					x: _position.x * parentWorldScale.x,
-					y: _position.y * parentWorldScale.y,
-					z: _position.z * parentWorldScale.z,
-				});
-				collider.setRotationWrtParent(_rotation);
-			} else {
-				collider.setTranslation({
-					x: _position.x * parentWorldScale.x,
-					y: _position.y * parentWorldScale.y,
-					z: _position.z * parentWorldScale.z,
-				});
-				collider.setRotation(_rotation);
-			}
-
-			const [
-				sensor,
-				collisionGroups,
-				solverGroups,
-				friction,
-				frictionCombineRule,
-				restitution,
-				restitutionCombineRule,
-				activeCollisionTypes,
-				contactSkin,
-			] = [
-				this.sensor(),
-				this.collisionGroups(),
-				this.solverGroups(),
-				this.friction(),
-				this.frictionCombineRule(),
-				this.restitution(),
-				this.restitutionCombineRule(),
-				this.activeCollisionTypes(),
-				this.contactSkin(),
-			];
-
-			if (sensor !== undefined) collider.setSensor(sensor);
-			if (collisionGroups !== undefined) collider.setCollisionGroups(collisionGroups);
-			if (solverGroups !== undefined) collider.setSolverGroups(solverGroups);
-			if (friction !== undefined) collider.setFriction(friction);
-			if (frictionCombineRule !== undefined) collider.setFrictionCombineRule(frictionCombineRule);
-			if (restitution !== undefined) collider.setRestitution(restitution);
-			if (restitutionCombineRule !== undefined) collider.setRestitutionCombineRule(restitutionCombineRule);
-			if (activeCollisionTypes !== undefined) collider.setActiveCollisionTypes(activeCollisionTypes);
-			if (contactSkin !== undefined) collider.setContactSkin(contactSkin);
+			this.updateColliderEffect();
 		});
 	}
 
@@ -284,6 +152,146 @@ export class NgtrAnyCollider {
 
 	setArgs(args: unknown[]) {
 		this.args.set(args);
+	}
+
+	private createColliderStateEffect() {
+		const collider = this.collider();
+		if (!collider) return;
+
+		const worldSingleton = this.physics.worldSingleton();
+		if (!worldSingleton) return;
+
+		const state = this.createColliderState(
+			collider,
+			this.objectRef.nativeElement,
+			this.rigidBody?.objectRef.nativeElement,
+		);
+		this.physics.colliderStates.set(collider.handle, state);
+
+		return () => {
+			this.physics.colliderStates.delete(collider.handle);
+			if (worldSingleton.proxy.getCollider(collider.handle)) {
+				worldSingleton.proxy.removeCollider(collider, true);
+			}
+		};
+	}
+
+	private createColliderEventsEffect() {
+		const collider = this.collider();
+		if (!collider) return;
+
+		const worldSingleton = this.physics.worldSingleton();
+		if (!worldSingleton) return;
+
+		const collisionEnter = this.collisionEnter.emit.bind(this.collisionEnter);
+		const collisionExit = this.collisionExit.emit.bind(this.collisionExit);
+		const intersectionEnter = this.intersectionEnter.emit.bind(this.intersectionEnter);
+		const intersectionExit = this.intersectionExit.emit.bind(this.intersectionExit);
+		const contactForce = this.contactForce.emit.bind(this.contactForce);
+
+		const hasCollisionEvent = hasListener(
+			this.collisionEnter,
+			this.collisionExit,
+			this.intersectionEnter,
+			this.intersectionExit,
+			this.rigidBody?.collisionEnter,
+			this.rigidBody?.collisionExit,
+			this.rigidBody?.intersectionEnter,
+			this.rigidBody?.intersectionExit,
+		);
+		const hasContactForceEvent = hasListener(this.contactForce, this.rigidBody?.contactForce);
+
+		if (hasCollisionEvent && hasContactForceEvent) {
+			collider.setActiveEvents(ActiveEvents.COLLISION_EVENTS | ActiveEvents.CONTACT_FORCE_EVENTS);
+		} else if (hasCollisionEvent) {
+			collider.setActiveEvents(ActiveEvents.COLLISION_EVENTS);
+		} else if (hasContactForceEvent) {
+			collider.setActiveEvents(ActiveEvents.CONTACT_FORCE_EVENTS);
+		}
+
+		this.physics.colliderEvents.set(collider.handle, {
+			onCollisionEnter: collisionEnter,
+			onCollisionExit: collisionExit,
+			onIntersectionEnter: intersectionEnter,
+			onIntersectionExit: intersectionExit,
+			onContactForce: contactForce,
+		});
+		return () => {
+			this.physics.colliderEvents.delete(collider.handle);
+		};
+	}
+
+	private updateColliderEffect() {
+		const collider = this.collider();
+		if (!collider) return;
+
+		const worldSingleton = this.physics.worldSingleton();
+		if (!worldSingleton) return;
+
+		const state = this.physics.colliderStates.get(collider.handle);
+		if (!state) return;
+
+		// Update collider position based on the object's position
+		const parentWorldScale = state.object.parent!.getWorldScale(_vector3);
+		const parentInvertedWorldMatrix = state.worldParent?.matrixWorld.clone().invert();
+
+		state.object.updateWorldMatrix(true, false);
+
+		_matrix4.copy(state.object.matrixWorld);
+
+		if (parentInvertedWorldMatrix) {
+			_matrix4.premultiply(parentInvertedWorldMatrix);
+		}
+
+		_matrix4.decompose(_position, _rotation, _scale);
+
+		if (collider.parent()) {
+			collider.setTranslationWrtParent({
+				x: _position.x * parentWorldScale.x,
+				y: _position.y * parentWorldScale.y,
+				z: _position.z * parentWorldScale.z,
+			});
+			collider.setRotationWrtParent(_rotation);
+		} else {
+			collider.setTranslation({
+				x: _position.x * parentWorldScale.x,
+				y: _position.y * parentWorldScale.y,
+				z: _position.z * parentWorldScale.z,
+			});
+			collider.setRotation(_rotation);
+		}
+
+		const [
+			sensor,
+			collisionGroups,
+			solverGroups,
+			friction,
+			frictionCombineRule,
+			restitution,
+			restitutionCombineRule,
+			activeCollisionTypes,
+			contactSkin,
+		] = [
+			this.sensor(),
+			this.collisionGroups(),
+			this.solverGroups(),
+			this.friction(),
+			this.frictionCombineRule(),
+			this.restitution(),
+			this.restitutionCombineRule(),
+			this.activeCollisionTypes(),
+			this.contactSkin(),
+		];
+
+		if (sensor !== undefined) collider.setSensor(sensor);
+		if (collisionGroups !== undefined) collider.setCollisionGroups(collisionGroups);
+		if (solverGroups !== undefined) collider.setSolverGroups(solverGroups);
+		if (friction !== undefined) collider.setFriction(friction);
+		if (frictionCombineRule !== undefined) collider.setFrictionCombineRule(frictionCombineRule);
+		if (restitution !== undefined) collider.setRestitution(restitution);
+		if (restitutionCombineRule !== undefined) collider.setRestitutionCombineRule(restitutionCombineRule);
+		if (activeCollisionTypes !== undefined) collider.setActiveCollisionTypes(activeCollisionTypes);
+		if (contactSkin !== undefined) collider.setContactSkin(contactSkin);
 	}
 
 	private createColliderState(
@@ -404,136 +412,162 @@ export class NgtrRigidBody {
 	rigidBody = computed(() => {
 		const worldSingleton = this.physics.worldSingleton();
 		if (!worldSingleton) return null;
-		const bodyDesc = this.bodyDesc();
-		return worldSingleton.proxy.createRigidBody(bodyDesc);
+		return worldSingleton.proxy.createRigidBody(this.bodyDesc());
 	});
 
 	protected childColliderOptions = computed(() => {
+		const colliders = this.colliders();
+		// if self colliders is false explicitly, disable auto colliders for this object entirely.
+		if (colliders === false) return [];
+
+		const physicsColliders = this.physics.colliders();
+		// if physics colliders is false explicitly, disable auto colliders for this object entirely.
+		if (physicsColliders === false) return [];
+
+		const options = this.options();
+		// if colliders on object is not set, use physics colliders
+		if (!options.colliders) options.colliders = physicsColliders;
+
 		const objectLocalState = getLocalState(this.objectRef.nativeElement);
 		// track object's children
 		objectLocalState?.nonObjects();
 		objectLocalState?.objects();
-		return createColliderOptions(this.objectRef.nativeElement, this.options(), true);
+
+		return createColliderOptions(this.objectRef.nativeElement, options, true);
 	});
 
 	constructor() {
 		extend({ Object3D });
 
 		effect((onCleanup) => {
-			const worldSingleton = this.physics.worldSingleton();
-			if (!worldSingleton) return;
-
-			const body = this.rigidBody();
-			if (!body) return;
-
-			const transformState = untracked(this.transformState);
-
-			const state = this.createRigidBodyState(body, this.objectRef.nativeElement);
-			this.physics.rigidBodyStates.set(body.handle, transformState ? transformState(state) : state);
-
-			onCleanup(() => {
-				this.physics.rigidBodyStates.delete(body.handle);
-				if (worldSingleton.proxy.getRigidBody(body.handle)) {
-					worldSingleton.proxy.removeRigidBody(body);
-				}
-			});
+			const cleanup = this.createRigidBodyStateEffect();
+			onCleanup(() => cleanup?.());
 		});
 
 		effect((onCleanup) => {
-			const worldSingleton = this.physics.worldSingleton();
-			if (!worldSingleton) return;
-
-			const body = this.rigidBody();
-			if (!body) return;
-
-			const wake = this.wake.emit.bind(this.wake);
-			const sleep = this.sleep.emit.bind(this.sleep);
-			const collisionEnter = this.collisionEnter.emit.bind(this.collisionEnter);
-			const collisionExit = this.collisionExit.emit.bind(this.collisionExit);
-			const intersectionEnter = this.intersectionEnter.emit.bind(this.intersectionEnter);
-			const intersectionExit = this.intersectionExit.emit.bind(this.intersectionExit);
-			const contactForce = this.contactForce.emit.bind(this.contactForce);
-
-			this.physics.rigidBodyEvents.set(body.handle, {
-				onWake: wake,
-				onSleep: sleep,
-				onCollisionEnter: collisionEnter,
-				onCollisionExit: collisionExit,
-				onIntersectionEnter: intersectionEnter,
-				onIntersectionExit: intersectionExit,
-				onContactForce: contactForce,
-			});
-
-			onCleanup(() => {
-				this.physics.rigidBodyEvents.delete(body.handle);
-			});
+			const cleanup = this.createRigidBodyEventsEffect();
+			onCleanup(() => cleanup?.());
 		});
 
 		effect(() => {
-			const worldSingleton = this.physics.worldSingleton();
-			if (!worldSingleton) return;
-
-			const body = this.rigidBody();
-			if (!body) return;
-
-			const state = this.physics.rigidBodyStates.get(body.handle);
-			if (!state) return;
-
-			state.object.updateWorldMatrix(true, false);
-			_matrix4.copy(state.object.matrixWorld).decompose(_position, _rotation, _scale);
-			body.setTranslation(_position, false);
-			body.setRotation(_rotation, false);
-
-			const [
-				gravityScale,
-				additionalSolverIterations,
-				linearDamping,
-				angularDamping,
-				lockRotations,
-				lockTranslations,
-				enabledRotations,
-				enabledTranslations,
-				angularVelocity,
-				linearVelocity,
-				ccd,
-				softCcdPrediction,
-				dominanceGroup,
-				userData,
-				bodyType,
-			] = [
-				this.gravityScale(),
-				this.additionalSolverIterations(),
-				this.linearDamping(),
-				this.angularDamping(),
-				this.lockRotations(),
-				this.lockTranslations(),
-				this.enabledRotations(),
-				this.enabledTranslations(),
-				this.angularVelocity(),
-				this.linearVelocity(),
-				this.ccd(),
-				this.softCcdPrediction(),
-				this.dominanceGroup(),
-				this.userData(),
-				this.bodyType(),
-			];
-
-			body.setGravityScale(gravityScale, true);
-			if (additionalSolverIterations !== undefined) body.setAdditionalSolverIterations(additionalSolverIterations);
-			if (linearDamping !== undefined) body.setLinearDamping(linearDamping);
-			if (angularDamping !== undefined) body.setAngularDamping(angularDamping);
-			body.setDominanceGroup(dominanceGroup);
-			if (enabledRotations !== undefined) body.setEnabledRotations(...enabledRotations, true);
-			if (enabledTranslations !== undefined) body.setEnabledTranslations(...enabledTranslations, true);
-			if (lockRotations !== undefined) body.lockRotations(lockRotations, true);
-			if (lockTranslations !== undefined) body.lockTranslations(lockTranslations, true);
-			body.setAngvel({ x: angularVelocity[0], y: angularVelocity[1], z: angularVelocity[2] }, true);
-			body.setLinvel({ x: linearVelocity[0], y: linearVelocity[1], z: linearVelocity[2] }, true);
-			body.enableCcd(ccd);
-			body.setSoftCcdPrediction(softCcdPrediction);
-			if (userData !== undefined) body.userData = userData;
-			if (bodyType !== body.bodyType()) body.setBodyType(bodyType, true);
+			this.updateRigidBodyEffect();
 		});
+	}
+
+	private createRigidBodyStateEffect() {
+		const worldSingleton = this.physics.worldSingleton();
+		if (!worldSingleton) return;
+
+		const body = this.rigidBody();
+		if (!body) return;
+
+		const transformState = untracked(this.transformState);
+
+		const state = this.createRigidBodyState(body, this.objectRef.nativeElement);
+		this.physics.rigidBodyStates.set(body.handle, transformState ? transformState(state) : state);
+
+		return () => {
+			this.physics.rigidBodyStates.delete(body.handle);
+			if (worldSingleton.proxy.getRigidBody(body.handle)) {
+				worldSingleton.proxy.removeRigidBody(body);
+			}
+		};
+	}
+
+	private createRigidBodyEventsEffect() {
+		const worldSingleton = this.physics.worldSingleton();
+		if (!worldSingleton) return;
+
+		const body = this.rigidBody();
+		if (!body) return;
+
+		const wake = this.wake.emit.bind(this.wake);
+		const sleep = this.sleep.emit.bind(this.sleep);
+		const collisionEnter = this.collisionEnter.emit.bind(this.collisionEnter);
+		const collisionExit = this.collisionExit.emit.bind(this.collisionExit);
+		const intersectionEnter = this.intersectionEnter.emit.bind(this.intersectionEnter);
+		const intersectionExit = this.intersectionExit.emit.bind(this.intersectionExit);
+		const contactForce = this.contactForce.emit.bind(this.contactForce);
+
+		this.physics.rigidBodyEvents.set(body.handle, {
+			onWake: wake,
+			onSleep: sleep,
+			onCollisionEnter: collisionEnter,
+			onCollisionExit: collisionExit,
+			onIntersectionEnter: intersectionEnter,
+			onIntersectionExit: intersectionExit,
+			onContactForce: contactForce,
+		});
+
+		return () => {
+			this.physics.rigidBodyEvents.delete(body.handle);
+		};
+	}
+
+	private updateRigidBodyEffect() {
+		const worldSingleton = this.physics.worldSingleton();
+		if (!worldSingleton) return;
+
+		const body = this.rigidBody();
+		if (!body) return;
+
+		const state = this.physics.rigidBodyStates.get(body.handle);
+		if (!state) return;
+
+		state.object.updateWorldMatrix(true, false);
+		_matrix4.copy(state.object.matrixWorld).decompose(_position, _rotation, _scale);
+		body.setTranslation(_position, false);
+		body.setRotation(_rotation, false);
+
+		const [
+			gravityScale,
+			additionalSolverIterations,
+			linearDamping,
+			angularDamping,
+			lockRotations,
+			lockTranslations,
+			enabledRotations,
+			enabledTranslations,
+			angularVelocity,
+			linearVelocity,
+			ccd,
+			softCcdPrediction,
+			dominanceGroup,
+			userData,
+			bodyType,
+		] = [
+			this.gravityScale(),
+			this.additionalSolverIterations(),
+			this.linearDamping(),
+			this.angularDamping(),
+			this.lockRotations(),
+			this.lockTranslations(),
+			this.enabledRotations(),
+			this.enabledTranslations(),
+			this.angularVelocity(),
+			this.linearVelocity(),
+			this.ccd(),
+			this.softCcdPrediction(),
+			this.dominanceGroup(),
+			this.userData(),
+			this.bodyType(),
+		];
+
+		body.setGravityScale(gravityScale, true);
+		if (additionalSolverIterations !== undefined) body.setAdditionalSolverIterations(additionalSolverIterations);
+		if (linearDamping !== undefined) body.setLinearDamping(linearDamping);
+		if (angularDamping !== undefined) body.setAngularDamping(angularDamping);
+		body.setDominanceGroup(dominanceGroup);
+		if (enabledRotations !== undefined) body.setEnabledRotations(...enabledRotations, true);
+		if (enabledTranslations !== undefined) body.setEnabledTranslations(...enabledTranslations, true);
+		if (lockRotations !== undefined) body.lockRotations(lockRotations, true);
+		if (lockTranslations !== undefined) body.lockTranslations(lockTranslations, true);
+		body.setAngvel({ x: angularVelocity[0], y: angularVelocity[1], z: angularVelocity[2] }, true);
+		body.setLinvel({ x: linearVelocity[0], y: linearVelocity[1], z: linearVelocity[2] }, true);
+		body.enableCcd(ccd);
+		body.setSoftCcdPrediction(softCcdPrediction);
+		if (userData !== undefined) body.userData = userData;
+		if (bodyType !== body.bodyType()) body.setBodyType(bodyType, true);
 	}
 
 	private createRigidBodyState(

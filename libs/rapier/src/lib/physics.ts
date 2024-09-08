@@ -1,9 +1,9 @@
 import {
-	afterNextRender,
 	ChangeDetectionStrategy,
 	Component,
 	computed,
 	DestroyRef,
+	effect,
 	inject,
 	input,
 	signal,
@@ -11,7 +11,6 @@ import {
 } from '@angular/core';
 import RAPIER, { ColliderHandle, EventQueue, Rotation, Vector, World } from '@dimforge/rapier3d-compat';
 import { injectStore, pick, vector3 } from 'angular-three';
-import { injectAutoEffect } from 'ngxtension/auto-effect';
 import { mergeInputs } from 'ngxtension/inject-inputs';
 import { MathUtils, Quaternion, Vector3 } from 'three';
 import { NgtrDebug } from './debug';
@@ -46,6 +45,24 @@ const defaultOptions: NgtrPhysicsOptions = {
 	timeStep: 1 / 60,
 	debug: false,
 };
+
+// timeStep = 1 / 60,
+//   paused = false,
+//   interpolate = true,
+//   updatePriority,
+//   updateLoop = "follow",
+//   debug = false,
+//
+//   gravity = [0, -9.81, 0],
+//   allowedLinearError = 0.001,
+//   predictionDistance = 0.002,
+//   numSolverIterations = 4,
+//   numAdditionalFrictionIterations = 4,
+//   numInternalPgsIterations = 1,
+//   minIslandSize = 128,
+//   maxCcdSubsteps = 1,
+//   erp = 0.8,
+//   lengthUnit = 1
 
 @Component({
 	selector: 'ngtr-physics',
@@ -128,24 +145,20 @@ export class NgtrPhysics {
 				return Promise.reject(err);
 			});
 
-		const autoEffect = injectAutoEffect();
+		effect(() => {
+			const world = this.worldSingleton();
+			if (!world) return;
 
-		afterNextRender(() => {
-			autoEffect(() => {
-				const world = this.worldSingleton();
-				if (!world) return;
-
-				world.proxy.gravity = this.gravity();
-				world.proxy.integrationParameters.numSolverIterations = this.numSolverIterations();
-				world.proxy.integrationParameters.numAdditionalFrictionIterations = this.numAdditionalFrictionIterations();
-				world.proxy.integrationParameters.numInternalPgsIterations = this.numInternalPgsIterations();
-				world.proxy.integrationParameters.normalizedAllowedLinearError = this.allowedLinearError();
-				world.proxy.integrationParameters.minIslandSize = this.minIslandSize();
-				world.proxy.integrationParameters.maxCcdSubsteps = this.maxCcdSubsteps();
-				world.proxy.integrationParameters.normalizedPredictionDistance = this.predictionDistance();
-				world.proxy.integrationParameters.contact_natural_frequency = this.erp();
-				world.proxy.lengthUnit = this.lengthUnit();
-			});
+			world.proxy.gravity = this.gravity();
+			world.proxy.integrationParameters.numSolverIterations = this.numSolverIterations();
+			world.proxy.integrationParameters.numAdditionalFrictionIterations = this.numAdditionalFrictionIterations();
+			world.proxy.integrationParameters.numInternalPgsIterations = this.numInternalPgsIterations();
+			world.proxy.integrationParameters.normalizedAllowedLinearError = this.allowedLinearError();
+			world.proxy.integrationParameters.minIslandSize = this.minIslandSize();
+			world.proxy.integrationParameters.maxCcdSubsteps = this.maxCcdSubsteps();
+			world.proxy.integrationParameters.normalizedPredictionDistance = this.predictionDistance();
+			world.proxy.integrationParameters.contact_natural_frequency = this.erp() * 1_000;
+			world.proxy.lengthUnit = this.lengthUnit();
 		});
 
 		this.destroyRef.onDestroy(() => {
@@ -232,12 +245,8 @@ export class NgtrPhysics {
 
 			const events = this.rigidBodyEvents.get(handle);
 			if (events?.onSleep || events?.onWake) {
-				if (rigidBody.isSleeping() && !state.isSleeping) {
-					events?.onSleep?.();
-				}
-				if (!rigidBody.isSleeping() && state.isSleeping) {
-					events?.onWake?.();
-				}
+				if (rigidBody.isSleeping() && !state.isSleeping) events?.onSleep?.();
+				if (!rigidBody.isSleeping() && state.isSleeping) events?.onWake?.();
 				state.isSleeping = rigidBody.isSleeping();
 			}
 
