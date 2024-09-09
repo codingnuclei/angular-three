@@ -146,19 +146,7 @@ export class NgtrPhysics {
 			});
 
 		effect(() => {
-			const world = this.worldSingleton();
-			if (!world) return;
-
-			world.proxy.gravity = this.gravity();
-			world.proxy.integrationParameters.numSolverIterations = this.numSolverIterations();
-			world.proxy.integrationParameters.numAdditionalFrictionIterations = this.numAdditionalFrictionIterations();
-			world.proxy.integrationParameters.numInternalPgsIterations = this.numInternalPgsIterations();
-			world.proxy.integrationParameters.normalizedAllowedLinearError = this.allowedLinearError();
-			world.proxy.integrationParameters.minIslandSize = this.minIslandSize();
-			world.proxy.integrationParameters.maxCcdSubsteps = this.maxCcdSubsteps();
-			world.proxy.integrationParameters.normalizedPredictionDistance = this.predictionDistance();
-			world.proxy.integrationParameters.contact_natural_frequency = this.erp() * 1_000;
-			world.proxy.lengthUnit = this.lengthUnit();
+			this.updateWorldEffect();
 		});
 
 		this.destroyRef.onDestroy(() => {
@@ -174,6 +162,26 @@ export class NgtrPhysics {
 		if (!this.paused()) {
 			this.internalStep(delta);
 		}
+	}
+
+	private updateWorldEffect() {
+		const world = this.worldSingleton();
+		if (!world) return;
+
+		world.proxy.gravity = this.gravity();
+		world.proxy.integrationParameters.numSolverIterations = this.numSolverIterations();
+		world.proxy.integrationParameters.numAdditionalFrictionIterations = this.numAdditionalFrictionIterations();
+		world.proxy.integrationParameters.numInternalPgsIterations = this.numInternalPgsIterations();
+		world.proxy.integrationParameters.normalizedAllowedLinearError = this.allowedLinearError();
+		world.proxy.integrationParameters.minIslandSize = this.minIslandSize();
+		world.proxy.integrationParameters.maxCcdSubsteps = this.maxCcdSubsteps();
+		world.proxy.integrationParameters.normalizedPredictionDistance = this.predictionDistance();
+		/**
+		 * NOTE: we don't know if this is the correct way to set for contact_natural_frequency or not.
+		 * but at least, it gets the `contact_erp` value to be very close with setting `erp`
+		 */
+		world.proxy.integrationParameters.contact_natural_frequency = this.erp() * 1_000;
+		world.proxy.lengthUnit = this.lengthUnit();
 	}
 
 	private internalStep(delta: number) {

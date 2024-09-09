@@ -31,7 +31,7 @@ import {
 	NgtrRigidBodyState,
 	NgtrRigidBodyType,
 } from './types';
-import { createColliderOptions, hasListener } from './utils';
+import { createColliderOptions, getEmitter, hasListener } from './utils';
 
 const colliderDefaultOptions: NgtrColliderOptions = {
 	contactSkin: 0,
@@ -183,11 +183,11 @@ export class NgtrAnyCollider {
 		const worldSingleton = this.physics.worldSingleton();
 		if (!worldSingleton) return;
 
-		const collisionEnter = this.collisionEnter.emit.bind(this.collisionEnter);
-		const collisionExit = this.collisionExit.emit.bind(this.collisionExit);
-		const intersectionEnter = this.intersectionEnter.emit.bind(this.intersectionEnter);
-		const intersectionExit = this.intersectionExit.emit.bind(this.intersectionExit);
-		const contactForce = this.contactForce.emit.bind(this.contactForce);
+		const collisionEnter = getEmitter(this.collisionEnter);
+		const collisionExit = getEmitter(this.collisionExit);
+		const intersectionEnter = getEmitter(this.intersectionEnter);
+		const intersectionExit = getEmitter(this.intersectionExit);
+		const contactForce = getEmitter(this.contactForce);
 
 		const hasCollisionEvent = hasListener(
 			this.collisionEnter,
@@ -481,13 +481,13 @@ export class NgtrRigidBody {
 		const body = this.rigidBody();
 		if (!body) return;
 
-		const wake = this.wake.emit.bind(this.wake);
-		const sleep = this.sleep.emit.bind(this.sleep);
-		const collisionEnter = this.collisionEnter.emit.bind(this.collisionEnter);
-		const collisionExit = this.collisionExit.emit.bind(this.collisionExit);
-		const intersectionEnter = this.intersectionEnter.emit.bind(this.intersectionEnter);
-		const intersectionExit = this.intersectionExit.emit.bind(this.intersectionExit);
-		const contactForce = this.contactForce.emit.bind(this.contactForce);
+		const wake = getEmitter(this.wake);
+		const sleep = getEmitter(this.sleep);
+		const collisionEnter = getEmitter(this.collisionEnter);
+		const collisionExit = getEmitter(this.collisionExit);
+		const intersectionEnter = getEmitter(this.intersectionEnter);
+		const intersectionExit = getEmitter(this.intersectionExit);
+		const contactForce = getEmitter(this.contactForce);
 
 		this.physics.rigidBodyEvents.set(body.handle, {
 			onWake: wake,

@@ -62,6 +62,11 @@ export function rapierQuaternionToQuaternion({ x, y, z, w }: Quaternion) {
 	return _quaternion.set(x, y, z, w);
 }
 
+export function getEmitter<T>(emitterRef: OutputEmitterRef<T> | undefined) {
+	if (!emitterRef || !emitterRef['listeners']) return undefined;
+	return emitterRef.emit.bind(emitterRef);
+}
+
 export function hasListener(...emitterRefs: (OutputEmitterRef<unknown> | undefined)[]) {
 	return emitterRefs.some((emitterRef) => emitterRef && emitterRef['listeners'] && emitterRef['listeners'].length > 0);
 }
